@@ -1,0 +1,108 @@
+ruleset Spaceship {
+
+import com.ibm.able.Able;
+import java.util.Collection;
+import java.util.Vector;
+
+import miners.InitPlaceholder;
+import miners.Mine;
+import miners.Route;
+import miners.Ship;
+import miners.utils.Order;
+import miners.utils.Price;
+
+variables {
+	Price price;
+	Vector mines;
+	Vector routes;
+	Vector ships;
+
+	Price querry;
+
+	static Order orders = new Order(); //TODO: vector add them
+}
+
+inputs {price, mines, routes, ships};
+
+outputs {};
+
+void init() {
+:	wm.clear();
+}
+
+void preProcess() {
+	//: wm.assert(new Order());
+	: wm.assert("INIT");
+	//: println("preProcess() " + ARL.showWorkingMemory(wm));
+}
+
+void process() using PatternMatchRete {
+//	: wm.assert("INIT");
+//	: wm.assert(new Order());
+	: wm.assert(orders);
+Init:
+	when (String goal (goal == "INIT") &
+		InitPlaceholder done ! ())
+	do {
+		println("Initialize data");
+		wm.assert(price);
+		wm.assertAll(mines);
+		wm.assertAll(routes);
+		wm.assertAll(ships);
+		wm.assert(new InitPlaceholder());
+	}
+:	when (Order order () &
+		Mine mine () &
+		Ship ship (ship.location == mine.location))
+	do {
+		println("ON SITE");
+		wm.retract(order);
+	}
+:	when (Order order () &
+		Mine mine () &
+		Route route (route.destination == mine.location) &
+		Ship ship (ship.location == route.source))
+	do {
+		println("ROUTE");
+		ship.AddStop(mine.location, 1);
+		//ORDER DEADLINE!
+		wm.modify(ship);
+		wm.retract(order);
+	}
+: 	when (Order order ())
+	do {
+		println("---TODO DO TURN---");
+		wm.findAllInstances("miners.Ship");
+	}
+}
+
+void processAbleEvent() {
+PAE0:	println("processAbleEvent");
+//:	wm.assert(event.getArgObject());
+:
+	if (event.getArgObject() instanceof Order) {
+		println("ORDER!");
+		orders = event.getArgObject();
+		wm.assert(event.getArgObject());
+		wm.assert(new Order());
+	} else if (event.getArgObject() instanceof Price) {
+		println("PRICE!");
+		querry = event.getArgObject();
+		querry.price = price.price;
+	}
+//:
+//	when(Ship ship (ship.capacity > 1.0f))
+//	do {
+		//println("processAbleEvent --");
+		//ship.capacity = ship.capacity - 2.0f;
+		//println(ship);
+		//wm.modify(ship);
+	//}
+//:	println("EVENT " + ARL.showWorkingMemory(wm));
+}
+
+//void postProcess() {
+//PP1:	println("postProcess " + ARL.showWorkingMemory(wm));
+//}
+
+}
